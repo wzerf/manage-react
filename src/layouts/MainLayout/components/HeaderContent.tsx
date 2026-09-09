@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import React from 'react';
-import { Avatar, Dropdown, Badge, Tooltip, Button, Breadcrumb, Input, Popover, List, Empty, Spin, App as AntdApp } from 'antd';
+import { Avatar, Dropdown, Tooltip, Button, Breadcrumb, Input, Popover } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   UserOutlined,
@@ -15,12 +15,7 @@ import {
   GlobalOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
-  BellOutlined,
-  CheckOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
 import { useMatches, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -29,21 +24,6 @@ import { getIconFromName } from '@/layouts/MainLayout/utils/iconResolver';
 import { useI18n } from '@/core/i18n';
 import { usePreferencesStore } from '@/core/preferences/store';
 import type { SupportedLanguagesType } from '@/core/preferences/types/layout';
-import { fetchListUserInbox, } from '@/api/hooks/internal-message';
-import { apiClient } from '@/api/client';
-import { useQuery } from '@tanstack/react-query';
-import { PaginationQuery, queryClient } from '@/core';
-import { globalSSEClient } from '@/core/transport/sse';
-
-dayjs.extend(relativeTime);
-
-/** 通知列表的相对时间（如"5 分钟前"）；跟随界面语言 */
-const fromNow = (value?: string, locale?: string): string => {
-  if (!value) return '-';
-  const d = dayjs(value);
-  if (!d.isValid()) return '-';
-  return locale?.startsWith('zh') ? d.locale('zh-cn').fromNow() : d.fromNow();
-};
 
 interface HeaderContentProps {
   userInfo: BasicUserInfo | null;
@@ -185,14 +165,6 @@ export const HeaderContent = ({
   // 用户菜单
   const userMenuItems: MenuProps['items'] = [
     {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: t('header.profile'),
-      onClick: () => {
-        navigate('/opm/profile');
-      },
-    },
-    {
       key: 'settings',
       icon: <SettingOutlined />,
       label: t('header.settings'),
@@ -209,227 +181,12 @@ export const HeaderContent = ({
     },
   ];
 
-  // 通用按钮样式
   const btnStyle: React.CSSProperties = {
     color: 'var(--ant-color-text-secondary)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   };
-
-  // 通知弹出框数据
-  const { t: tInbox } = useTranslation('inbox');
-  const { message } = AntdApp.useApp();
-  const [markAllReadLoading, setMarkAllReadLoading] = useState(false);
-  const appLocale = usePreferencesStore((state) => state.preferences.app.locale);
-
-  // 未读数（独立 COUNT）：badge 数字来源
-  const { data: inboxUnread } = useQuery({
-    queryKey: ['inboxPreview', userInfo?.id],
-    queryFn: async () => {
-      const query = new PaginationQuery({
-        paging: { page: 1, pageSize: 1 },
-        // recipient_user_id 必传：不传只靠租户过滤，会查到同租户其他用户的收件记录
-        formValues: { recipient_user_id: String(userInfo?.id), status: 'RECEIVED' },
-      });
-      return await fetchListUserInbox(query);
-    },
-    enabled: Boolean(userInfo?.id),
-    // 兜底轮询：实时更新靠下方 SSE notification 事件触发 invalidate，这里只在 SSE 失联时补拉
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false,
-  });
-  // 未读数用列表响应的服务端 total（独立 COUNT），不能用当前页条数——后者封顶在 pageSize
-  const unreadCount = inboxUnread?.total ?? 0;
-
-  // 弹层列表：最近 5 条（已读+未读混合），未读带圆点加粗
-  const { data: inboxRecent, isLoading: recentLoading } = useQuery({
-    queryKey: ['inboxPreviewList', userInfo?.id],
-    queryFn: async () => {
-      const query = new PaginationQuery({
-        paging: { page: 1, pageSize: 5 },
-        formValues: { recipient_user_id: String(userInfo?.id) },
-      });
-      return await fetchListUserInbox(query);
-    },
-    enabled: Boolean(userInfo?.id),
-    refetchInterval: 300_000,
-    refetchIntervalInBackground: false,
-  });
-  const recentItems = inboxRecent?.items ?? [];
-
-  // SSE 实时通知：收到新站内信即刷新预览。
-  // 后端一直在推 notification 事件，此前前端建了连接却无人订阅，实时推送全部落空。
-  useEffect(() => {
-    if (!userInfo?.id) return undefined;
-    const handler = () => {
-      queryClient.invalidateQueries({ queryKey: ['inboxPreview', userInfo?.id] });
-      queryClient.invalidateQueries({ queryKey: ['inboxPreviewList', userInfo?.id] });
-    };
-    globalSSEClient.on('notification', handler);
-    return () => {
-      globalSSEClient.off('notification', handler);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userInfo?.id]);
-
-  const markAllRead = async () => {
-    if (!userInfo?.id) return;
-    setMarkAllReadLoading(true);
-    try {
-      // 后端约定：recipientIds 为空 = 该用户全部未读
-      await apiClient.internalMessageRecipientService.MarkNotificationAsRead({
-        userId: userInfo.id,
-        recipientIds: [],
-      });
-      message.success(tInbox('markAllReadSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['inboxPreview', userInfo?.id] });
-      queryClient.invalidateQueries({ queryKey: ['inboxPreviewList', userInfo?.id] });
-      queryClient.invalidateQueries({ queryKey: ['listUserInbox'] });
-    } catch (error) {
-      message.error((error as Error)?.message || tInbox('markAllReadFailed'));
-    } finally {
-      setMarkAllReadLoading(false);
-    }
-  };
-
-  const inboxContent = (
-    <div className="notification-popover" style={{ width: 336 }}>
-      {/* 头部：标题 + 未读数 + 全部已读 */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '2px 2px 10px',
-          borderBottom: '1px solid var(--ant-color-border)',
-          marginBottom: 4,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600 }}>
-          {tInbox('pageTitle')}
-          {unreadCount > 0 && (
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 400,
-                lineHeight: '18px',
-                padding: '0 8px',
-                borderRadius: 10,
-                color: 'var(--ant-color-primary)',
-                background: 'rgba(0, 107, 230, 0.12)',
-              }}
-            >
-              {tInbox('unreadCount', { count: unreadCount })}
-            </span>
-          )}
-        </div>
-        <Button
-          type="text"
-          size="small"
-          icon={<CheckOutlined />}
-          loading={markAllReadLoading}
-          disabled={unreadCount <= 0}
-          onClick={markAllRead}
-        >
-          {tInbox('markAllRead')}
-        </Button>
-      </div>
-
-      <Spin spinning={recentLoading}>
-        {recentItems.length > 0 ? (
-          <List
-            dataSource={recentItems}
-            renderItem={(item) => {
-              const unread = item.status === 'RECEIVED';
-              const preview = (item.content || '')
-                .replace(/<[^>]*>/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .slice(0, 46);
-              return (
-                <List.Item
-                  className="notification-item"
-                  style={{ padding: '9px 8px', borderRadius: 8, cursor: 'pointer', gap: 10 }}
-                  onClick={() => navigate('/internal-message/inbox')}
-                >
-                  <span
-                    className="notification-item__dot"
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      flexShrink: 0,
-                      marginTop: 6,
-                      background: unread ? 'var(--ant-color-primary)' : 'transparent',
-                    }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: unread ? 600 : 400,
-                        color: unread
-                          ? 'var(--ant-color-text)'
-                          : 'var(--ant-color-text-secondary)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {item.title || '-'}
-                    </div>
-                    {preview && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: 'var(--ant-color-text-tertiary)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          marginTop: 2,
-                        }}
-                      >
-                        {preview}
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--ant-color-text-tertiary)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {fromNow(item.createdAt, appLocale)}
-                  </span>
-                </List.Item>
-              );
-            }}
-          />
-        ) : (
-          <Empty
-            description={tInbox('noMessages')}
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            style={{ padding: '16px 0' }}
-          />
-        )}
-      </Spin>
-
-      <div
-        style={{
-          borderTop: '1px solid var(--ant-color-border)',
-          textAlign: 'center',
-          padding: '8px 0 0',
-          marginTop: 4,
-        }}
-      >
-        <Button type="link" size="small" onClick={() => navigate('/internal-message/inbox')}>
-          {tInbox('goToInbox')}
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <div
@@ -663,22 +420,6 @@ export const HeaderContent = ({
               style={btnStyle}
             />
           </Tooltip>
-        )}
-
-        {/* 通知 */}
-        {widgetConfig.notification && (
-          <Popover
-            content={inboxContent}
-            trigger="click"
-            placement="bottomRight"
-            styles={{ body: { padding: '10px 10px 6px' } } as any}
-          >
-            <Badge count={unreadCount} size="small" offset={[0, 4]}>
-              <Tooltip title={t('header.notification')}>
-                <Button type="text" icon={<BellOutlined />} size="small" style={btnStyle} />
-              </Tooltip>
-            </Badge>
-          </Popover>
         )}
 
         {/* 用户头像 + 下拉菜单 */}

@@ -4,14 +4,26 @@ import { createLazyRoute } from '@/core/router';
 export const dashboardRoutes: AppRouteObject[] = [
   {
     name: 'dashboard',
-    path: 'dashboard', // 相对路径，会自动拼接到父路由 '/'
-    element: createLazyRoute(() => import('@/pages/app/dashboard')),
+    path: 'dashboard',
     meta: {
       title: 'routes:dashboard',
-      icon: 'lucide:layout-dashboard', // Iconify 格式
-      order: 1,
-      hideInMenu: false,
+      icon: 'lucide:layout-dashboard',
+      order: -1,
     },
+    children: [
+      {
+        name: 'analytics',
+        path: 'analytics',
+        element: createLazyRoute(() => import('@/pages/app/dashboard/analytics')),
+        meta: { title: 'routes:analytics', icon: 'lucide:area-chart', affixTab: true },
+      },
+      {
+        name: 'workspace',
+        path: 'workspace',
+        element: createLazyRoute(() => import('@/pages/app/dashboard/workspace')),
+        meta: { title: 'routes:workspace', icon: 'carbon:workspace' },
+      },
+    ],
   },
 ];
 

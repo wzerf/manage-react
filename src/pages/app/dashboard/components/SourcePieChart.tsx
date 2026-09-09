@@ -12,35 +12,19 @@ interface SourcePieChartProps {
  * 登录成功/失败占比饼图。
  * 后端返回 status 枚举名（SUCCESS/FAILED/...），这里经 i18n 转成本地化文案展示。
  */
+const STATUS_LABELS: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', PARTIAL: '部分成功' };
+
 export const SourcePieChart = ({ data }: SourcePieChartProps) => {
   const { token } = theme.useToken();
   const { t } = useI18n('dashboard');
-  const { t: tAuditLog } = useI18n('login-audit-log');
 
-  // 状态语义色：绿=成功、红=失败、琥珀=部分成功，未知状态回退中性灰
-  const statusColors: Record<string, string> = {
-    SUCCESS: '#34D399',
-    FAILED: '#F87171',
-    PARTIAL: '#FBBF24',
-  };
+  const statusColors: Record<string, string> = { SUCCESS: '#34D399', FAILED: '#F87171', PARTIAL: '#FBBF24' };
   const fallbackColor = '#94A3B8';
 
   const option = useMemo(() => {
     const items = data?.items ?? [];
 
-    // 状态枚举名 → 本地化文案，复用登录审计日志模块的 status.* 翻译。
-    const statusLabel = (label?: string): string => {
-      switch (label) {
-        case 'SUCCESS':
-          return tAuditLog('status.SUCCESS');
-        case 'FAILED':
-          return tAuditLog('status.FAILED');
-        case 'PARTIAL':
-          return tAuditLog('status.PARTIAL');
-        default:
-          return label ?? '';
-      }
-    };
+    const statusLabel = (label?: string): string => STATUS_LABELS[label ?? ''] ?? label ?? '';
 
     return {
       tooltip: {
@@ -91,7 +75,7 @@ export const SourcePieChart = ({ data }: SourcePieChartProps) => {
         },
       ],
     };
-  }, [data, token, t, tAuditLog]);
+  }, [data, token, t]);
 
   return (
     <Card title={t('charts.loginStatusDistribution')} style={{ height: '100%' }}>
