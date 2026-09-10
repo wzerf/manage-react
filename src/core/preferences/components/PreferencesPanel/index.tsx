@@ -72,6 +72,7 @@ export const PreferencesPanel: React.FC<PreferencesPanelProps> = ({ open, onClos
       }
       placement="right"
       size={360}
+      destroyOnHidden
       open={open}
       onClose={onClose}
       closable={false}

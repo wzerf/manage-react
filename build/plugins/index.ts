@@ -5,7 +5,7 @@ import {nojekyllPlugin} from './nojekyll';
 import {autoImportPlugin} from './autoImport';
 import {versionUpdatePlugin} from './version';
 import {cspMetaPlugin} from './csp';
-import react from '@vitejs/plugin-react-swc';
+import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import viteCompression from 'vite-plugin-compression';
 
@@ -14,11 +14,7 @@ export function createVitePlugins() {
 
     // 插件参数
     const vitePlugins: PluginOption[] = [
-        // React SWC 插件，配置以支持 React 19
-        react({
-            // 确保使用正确的 JSX 运行时
-            tsDecorators: false,
-        }),
+        react(),
         tailwindcss(),
         // 自动导入
         autoImportPlugin(),

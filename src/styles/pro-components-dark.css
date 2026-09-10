@@ -13,12 +13,21 @@
 .ant-pro-table .ant-table {
   background-color: var(--ant-color-bg-container) !important;
 }
-/* 表体行在亮暗下保持一致的底部边框 */
+/* 表体行在亮暗下保持一致的底部边框。
+   单元格必须用不透明底：操作列等 fixed 列是 position:sticky，
+   半透明底会在横向滚动/触摸时透出下层单元格（叠字）。 */
 .ant-pro-table .ant-table-tbody > tr > td {
   border-bottom: 1px solid;
+  background-color: var(--ant-color-bg-container);
 }
-.ant-pro-table .ant-table-tbody > tr:hover > td {
-  background-color: var(--ant-color-fill-secondary) !important;
+/* fill-secondary 是半透明 token，叠在容器底上得到不透明 hover 色 */
+.ant-pro-table .ant-table-tbody > tr:hover > td,
+.ant-pro-table .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+  background-color: var(--ant-color-bg-container) !important;
+  background-image: linear-gradient(
+    var(--ant-color-fill-secondary),
+    var(--ant-color-fill-secondary)
+  );
 }
 
 /* 表格单元格超长文本省略号 */
@@ -27,10 +36,25 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 固定列：overflow:hidden 会裁掉 antd 的侧向阴影 ::after，
+   并在触摸横向滚动时把 sticky 层合成出残影。 */
+.ant-pro-table .ant-table-cell-fix,
+.ant-pro-table .ant-table-cell-fix-start,
+.ant-pro-table .ant-table-cell-fix-end,
+.ant-pro-table .ant-table-cell-fix-left,
+.ant-pro-table .ant-table-cell-fix-right {
+  overflow: visible;
+  background-color: var(--ant-color-bg-container);
+}
 /* 操作列的按钮容器（Ant Space）不截断 */
 .ant-pro-table .ant-table-cell .ant-space {
   overflow: visible;
   white-space: nowrap;
+}
+/* 横向触摸滑动时不要把下层页面橡皮筋带出来 */
+.ant-pro-table .ant-table-content,
+.ant-pro-table .ant-table-body {
+  overscroll-behavior-x: contain;
 }
 
 /* ========== 分页器 ========== */
@@ -68,10 +92,12 @@
 .ant-pro-table .ant-pro-table-list-toolbar-container {
   border-radius: var(--ant-border-radius-lg, 8px) var(--ant-border-radius-lg, 8px) 0 0;
 }
-/* 表格容器底部圆角（与顶部对称） */
+/* 表格容器底部圆角（与顶部对称）。
+   用 clip 而不是 hidden：hidden 会变成滚动容器，触摸横向滑动时
+   sticky 操作列和橡皮筋会露出下层内容。 */
 .ant-pro-table .ant-table-container {
   border-radius: 0 0 var(--ant-border-radius-lg, 8px) var(--ant-border-radius-lg, 8px) !important;
-  overflow: hidden !important;
+  overflow: clip !important;
 }
 /* 表格内容区域底部圆角 */
 .ant-pro-table .ant-table-container .ant-table-content {
@@ -367,7 +393,7 @@ html[data-theme='dark'] .ant-form .ant-input:not(.ant-input-affix-wrapper .ant-i
 .ant-pro-table .ant-table {
   border: 1px solid;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: clip;
 }
 
 /* 暗黑模式卡片：#111827 卡片面 + 1px 极细描边 + shadow-xl 悬浮感 */

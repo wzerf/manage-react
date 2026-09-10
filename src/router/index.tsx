@@ -7,11 +7,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { getAccessStatic } from '@/core/access';
 import { fetchAllDictEntries } from '@/hooks/useDictCache';
 import { usePreferencesStore } from '@/core/preferences/store';
-import { apiClient } from '@/api/client';
+import { getAllMenusApi } from '@/api/rest/menu';
 import { useI18n } from '@/core/i18n';
+import { message } from 'antd';
+import { loadAccessMenusCache, saveAccessMenusCache } from '@/utils/menu-cache';
 
 import { Forbidden } from '@/pages/core/error';
-import type { AppRouteObject, ComponentRecordType } from '@/core/router';
+import type { AppRouteObject, BackendRoute, ComponentRecordType } from '@/core/router';
 import MainLayout from '@/layouts/MainLayout';
 import { AuthGuard } from '@/router/guards';
 
@@ -142,8 +144,25 @@ export const AppRouter = () => {
           permissions: freshPermissions,
           forbiddenElement: <Forbidden />,
           fetchMenuListAsync: async () => {
-            const data = await apiClient.adminPortalService.GetNavigation({});
-            return data.items ?? [];
+            // 对齐 Vue：后端模式走 REST /menu/all，失败时回落到同 token 的本地缓存
+            const token = useAuthStore.getState().accessToken;
+            try {
+              const menus = await getAllMenusApi();
+              const list = (menus ?? []) as BackendRoute[];
+              if (token) {
+                saveAccessMenusCache(token, list);
+              }
+              return list;
+            } catch (error) {
+              if (token) {
+                const cached = loadAccessMenusCache<BackendRoute>(token);
+                if (cached) {
+                  message.warning('菜单加载失败，已使用本地缓存');
+                  return cached;
+                }
+              }
+              throw error;
+            }
           },
           layoutMap,
           pageMap,
@@ -174,5 +193,5 @@ export const AppRouter = () => {
   if (loading || !router)
     return <Loading fullScreen text={t('loading.initializing')} subText={t('loading.loadingRouter')} />;
 
-  return <RouterProvider router={router} />;
+  return <RouterProvider router={router} future={{ v7_startTransition: true }} />;
 };

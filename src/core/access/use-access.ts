@@ -4,7 +4,7 @@
  *
  * 鉴权码来源：
  *   - 角色码：userInfo.roles → useUserStore.userRoles
- *   - 权限码：GetMyPermissionCode → useUserStore.accessCodes
+ *   - 权限码：GET /auth/codes → useUserStore.accessCodes
  *   - UI 绑定：meta.authority（角色码和权限码的混合数组）
  */
 import { useCallback } from 'react';

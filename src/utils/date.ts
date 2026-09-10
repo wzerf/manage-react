@@ -27,6 +27,13 @@ export const formatDateTime = (timestamp?: any) => {
     }
 };
 
+export function parsePlatformMillis(value: string | null | undefined): number {
+  if (!value) return NaN;
+  if (/[zZ]$/.test(value) || /[+-]\d{2}:?\d{2}$/.test(value)) return Date.parse(value);
+  const iso = value.replace(' ', 'T');
+  return Date.parse(`${iso}+08:00`);
+}
+
 // 日期格式化
 export const DATE_FORMAT = 'YYYY-MM-DD';
 export const TIME_FORMAT = 'YYYY-MM-DD HH:mm:ss';

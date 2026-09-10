@@ -11,16 +11,17 @@ export const autoImportPlugin = (): PluginOption => {
             'src/hooks/**',
             'src/components/**',
             'src/stores/**',
-            'types/**',
+            '!src/components/common/Editor/index.ts',
+            '!src/components/common/Editor/src/TiptapEditor/index.ts',
+            '!**/*.md',
         ],
         imports: [
             'react',
-            'react-router',
             'react-router-dom',
             'react-i18next',
             {from: 'react', imports: ['FC'], type: true},
         ],
-        dts: 'types/autoImports.d.ts',
+        dts: 'src/auto-imports.d.ts',
         include: [/\.[tj]sx?$/],
         resolvers: [
             (name) => {

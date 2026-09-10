@@ -48,7 +48,8 @@ export const createAccessibleRouter = async (
         // 分离布局路由与静态路由（auth/error 等不受 AuthGuard 保护）
         const { layoutRoutes, otherRoutes } = separateRoutes(routes);
 
-        // 后端返回的路由树（根节点 component="BasicLayout"，已包含 Layout）
+        // 对齐 Vue generateAccessible：/menu/all 返回的是业务树，没有 BasicLayout 根。
+        // 必须挂到 path='/' 的 MainLayout 下，否则登录后业务页没有侧栏。
         const backendRoutes = await generateRoutesByBackend({
           staticRoutes: layoutRoutes,
           mode,
@@ -57,8 +58,18 @@ export const createAccessibleRouter = async (
           pageMap: options.pageMap,
         });
 
-        // 合并：后端路由 + 静态路由（auth/error）
-        routes = [...backendRoutes, ...otherRoutes];
+        const layout = layoutRoutes[0];
+        if (layout) {
+          const keepChildren = (layout.children ?? []).filter(
+            (child) => child.index || child.meta?.hideInMenu,
+          );
+          routes = [
+            { ...layout, children: [...keepChildren, ...backendRoutes] },
+            ...otherRoutes,
+          ];
+        } else {
+          routes = [...backendRoutes, ...otherRoutes];
+        }
       }
       break;
     }

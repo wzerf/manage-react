@@ -13,6 +13,14 @@ import {
 } from './preset-interceptors';
 import { defaultIdGenerator, getDefaultErrorMsg } from './utils';
 import type { RequestClientCallbacks, RequestClientOptions, RequestContentType } from './types';
+import {
+  createSecurityRequestInterceptor,
+  createSecurityResponseInterceptor,
+} from './security/interceptors';
+import {
+  isRequestKeyFailedCode,
+  shouldSkipReAuthForKeyFailure,
+} from './security/result-codes';
 
 class RequestClient {
   private readonly instance: AxiosInstance;
@@ -113,10 +121,100 @@ class RequestClient {
     this.useTokenInterceptor(callbacks);
     this.useRequestIdInterceptor();
     this.useLocaleInterceptor(callbacks);
+    this.useSecurityInterceptors(callbacks);
+    this.useBusinessCodeInterceptor();
+    this.useKeyFailedInterceptor(callbacks);
     // auth 拦截器必须在 responseData 之前，否则 401 错误会丢失 AxiosError 结构
     this.useAuthInterceptor(callbacks);
     this.useResponseDataInterceptor();
     this.useErrorMessageInterceptor(callbacks);
+  }
+
+  private useSecurityInterceptors(callbacks: RequestClientCallbacks) {
+    const baseURL = (this.instance.defaults.baseURL as string) || '';
+    this.addRequestInterceptor({
+      fulfilled: createSecurityRequestInterceptor({
+        baseURL,
+        getLocale: callbacks.getLocale,
+      }) as never,
+    });
+    const secResp = createSecurityResponseInterceptor() as unknown as (
+      r: unknown,
+    ) => Promise<unknown>;
+    this.addResponseInterceptor({
+      fulfilled: secResp as never,
+      rejected: async (error: unknown) => {
+        const err = error as {
+          response?: { data?: unknown; headers?: Record<string, unknown>; config?: unknown };
+        };
+        if (err?.response) {
+          try {
+            const cfg = (err.response.config ?? {}) as { _aesKey?: CryptoKey | null };
+            const headers = (err.response.headers ?? {}) as Record<string, unknown>;
+            const isEncrypted =
+              String(headers['x-response-is-encrypt'] ?? headers['X-Response-Is-Encrypt'] ?? '') ===
+              'true';
+            if (isEncrypted && cfg._aesKey) {
+              const { aesDecrypt } = await import('./security/crypto');
+              const encryptedText =
+                typeof err.response.data === 'string'
+                  ? (err.response.data as string)
+                  : JSON.stringify(err.response.data);
+              const decryptedText = await aesDecrypt(encryptedText, cfg._aesKey, '');
+              (err.response as { data: unknown }).data = JSON.parse(decryptedText);
+            } else if (typeof err.response.data === 'string' && (cfg as { _securityEncrypted?: boolean })._securityEncrypted) {
+              try {
+                (err.response as { data: unknown }).data = JSON.parse(err.response.data as string);
+              } catch {
+                // keep string
+              }
+            }
+          } catch {
+            // ignore decrypt failure, keep original error
+          }
+        }
+        throw error;
+      },
+    });
+  }
+
+  private useKeyFailedInterceptor(callbacks: RequestClientCallbacks) {
+    let reAuthPromise: Promise<void> | null = null;
+    const doReAuth = async () => {
+      if (reAuthPromise) return reAuthPromise;
+      reAuthPromise = (async () => {
+        if (callbacks.onReAuthenticate) await callbacks.onReAuthenticate(true);
+      })().finally(() => {
+        reAuthPromise = null;
+      });
+      return reAuthPromise;
+    };
+
+    this.addResponseInterceptor({
+      rejected: async (error: unknown) => {
+        const err = error as {
+          config?: { url?: string };
+          response?: { config?: { url?: string }; data?: { code?: unknown; msg?: string; message?: string } };
+          data?: { code?: unknown; msg?: string; message?: string };
+        };
+        const payload = (err?.response?.data ?? (err as { data?: unknown })?.data ?? {}) as {
+          code?: unknown;
+          msg?: string;
+          message?: string;
+        };
+        const requestUrl = String(err?.config?.url ?? err?.response?.config?.url ?? '');
+        if (isRequestKeyFailedCode(payload?.code) && !shouldSkipReAuthForKeyFailure(requestUrl)) {
+          const errMsg =
+            (typeof payload?.msg === 'string' && payload.msg) ||
+            (typeof payload?.message === 'string' && payload.message) ||
+            '密钥错误';
+          callbacks.onError?.(errMsg);
+          await doReAuth();
+          throw Object.assign(error as object, { __handledByAuthInterceptor: true });
+        }
+        throw error;
+      },
+    });
   }
 
   /**
@@ -159,6 +257,28 @@ class RequestClient {
           config.headers['Accept-Language'] = callbacks.getLocale();
         }
         return config as never;
+      },
+    });
+  }
+
+  private useBusinessCodeInterceptor() {
+    this.addResponseInterceptor({
+      fulfilled: (response) => {
+        const rd: unknown = (response as { data: unknown }).data;
+        if (
+          rd &&
+          typeof rd === 'object' &&
+          'code' in rd &&
+          'data' in rd &&
+          typeof (rd as { code: unknown }).code === 'number'
+        ) {
+          const code = (rd as { code: number }).code;
+          if (code !== 0) {
+            throw Object.assign({}, rd, { response });
+          }
+          (response as { data: unknown }).data = (rd as { data: unknown }).data;
+        }
+        return response as never;
       },
     });
   }

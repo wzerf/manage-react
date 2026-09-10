@@ -77,29 +77,42 @@ const IFrameLayout = () => {
   }, [t]);
 
   // 跨域通信：监听 iframe 发来的消息
+  // 将耗时样式写操作放到 rAF、状态更新放到 microtask，避免阻塞 message 事件主线程
+  // Chrome 对 message handler 超过 ~50ms 会报 [Violation] 'message' handler took xxxms
   useEffect(() => {
+    if (!iframeOrigin) return;
+
+    let rafId: number | null = null;
+    let pendingHeight: number | null = null;
+
     const handleMessage = (event: MessageEvent) => {
-      // 校验来源 origin：只接受当前 iframe src 对应 origin 的消息，
-      // 防止任意页面（包括其他标签页/弹窗）发 {type:'ready'} 隐藏 loading
-      // 或 {type:'resize'} 篡改高度。
-      if (!iframeOrigin || event.origin !== iframeOrigin) return;
+      if (event.origin !== iframeOrigin) return;
+      const payload = event.data as { type?: string; data?: any } | null;
+      if (!payload || typeof payload.type !== 'string') return;
 
-      const { type, data } = event.data || {};
-
-      switch (type) {
-        case 'resize':
-          // iframe 内部通知高度变化，实现自适应
-          if (iframeRef.current && data?.height) {
-            iframeRef.current.style.height = `${data.height}px`;
+      switch (payload.type) {
+        case 'resize': {
+          const h = payload.data?.height;
+          if (typeof h !== 'number' || !iframeRef.current) break;
+          pendingHeight = h;
+          if (rafId === null) {
+            rafId = requestAnimationFrame(() => {
+              if (iframeRef.current && pendingHeight !== null) {
+                iframeRef.current.style.height = `${pendingHeight}px`;
+              }
+              rafId = null;
+              pendingHeight = null;
+            });
           }
           break;
+        }
         case 'route-change':
-          // iframe 内部路由变化，可同步到主应用面包屑等
-          console.log('[IFrame] route change:', data);
+          if (import.meta.env.DEV) {
+            console.log('[IFrame] route change:', payload.data);
+          }
           break;
         case 'ready':
-          // iframe 内部应用初始化完成
-          setLoading(false);
+          queueMicrotask(() => setLoading(false));
           break;
         default:
           break;
@@ -107,7 +120,10 @@ const IFrameLayout = () => {
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, [iframeOrigin]);
 
   // 向 iframe 发送消息（跨域通信）

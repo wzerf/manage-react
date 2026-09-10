@@ -1,6 +1,8 @@
+verifyDepsBeforeRun: false
+
 allowBuilds:
-  '@swc/core': false
-  core-js: false
-  esbuild: false
-  json-editor-vue: set this to true or false
-  vue-demi: set this to true or false
+  '@swc/core': true
+  core-js: true
+  esbuild: true
+  json-editor-vue: true
+  vue-demi: true

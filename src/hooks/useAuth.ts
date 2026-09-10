@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/auth';
 import { type authenticationservicev1_LoginRequest } from '@/api/generated/admin/service/v1';
 import { useUserStore } from '@/stores/user';
 import { fetchUserProfile, fetchGenerateCaptcha } from '@/api/hooks';
-import { fetchMyPermissionCode } from '@/api/hooks/admin-portal';
+import { getAccessCodesApi } from '@/api/rest/auth';
 
 /**
  * 认证业务 Hook
@@ -29,42 +29,49 @@ export function useAuth() {
   }
 
   /**
-   * 获取当前用户权限码
+   * 获取当前用户权限码（对齐 Vue GET /auth/codes，返回 string[]）
    */
   async function fetchAccessCodes() {
-    return await fetchMyPermissionCode();
+    return await getAccessCodesApi();
   }
 
   /**
    * 获取用户权限码（角色码 + 权限码分开存储）
-   * 首次获取后缓存到 store，后续直接读取
+   *
+   * 登录成功后 userInfo/roles 可能已写入，但 accessCodes 仍为空。
+   * 旧逻辑把「已有角色」当成全部就绪，跳过拉码，任务调度/日志审计页内 Tab
+   * 会因 hasAccessByCodes 失败渲染 403。权限码为空时必须单独拉取。
    */
   async function getUserPermissionCodes(): Promise<{ roles: string[]; codes: string[] } | false> {
     const userStore = useUserStore.getState();
-    const { userInfo, userRoles, accessCodes } = userStore;
+    let { userInfo, userRoles, accessCodes } = userStore;
 
-    // 如果 store 中没有用户信息或权限码为空，先获取
-    if (userInfo === null || (userRoles.length === 0 && accessCodes.length === 0)) {
-      const [userInfoResult, accessCodeResult] = await Promise.all([
-        fetchUserInfo(),
-        fetchAccessCodes(),
-      ]);
-
-      if (!userInfoResult || !accessCodeResult) {
-        console.warn('getUserPermissionCodes: failed to fetch user info or access codes');
+    if (userInfo === null) {
+      const userInfoResult = await fetchUserInfo();
+      if (!userInfoResult) {
+        console.warn('getUserPermissionCodes: failed to fetch user info');
         return false;
       }
-
-      // 更新到 store：用户信息、角色码、权限码分开存储
       userStore.setUserInfo(userInfoResult);
-      const roles = userInfoResult.roles ?? [];
-      const codes = accessCodeResult.codes ?? [];
-      userStore.setUserRoles(roles);
-      userStore.setAccessCodes(codes);
-      return { roles, codes };
+      userInfo = userInfoResult;
+      userRoles = userInfoResult.roles ?? [];
+    } else if (userRoles.length === 0 && userInfo.roles?.length) {
+      userRoles = userInfo.roles;
+      userStore.setUserRoles(userRoles);
     }
 
-    // 已有缓存，直接返回
+    if (accessCodes.length === 0) {
+      try {
+        const codes = await fetchAccessCodes();
+        const list = Array.isArray(codes) ? codes : [];
+        userStore.setAccessCodes(list);
+        accessCodes = list;
+      } catch (error) {
+        console.warn('getUserPermissionCodes: failed to fetch access codes', error);
+        return false;
+      }
+    }
+
     return { roles: userRoles, codes: accessCodes };
   }
 

@@ -15,7 +15,6 @@ export default defineConfig(({mode}) => {
         resolve: {
             alias: {
                 '@': '/src',
-                '#': '/types',
             },
         },
         css: {
@@ -27,7 +26,7 @@ export default defineConfig(({mode}) => {
             },
         },
         server: {
-            open: true,
+            open: false,
             port: VITE_SERVER_PORT,
             // 跨域处理
             proxy: createProxy(VITE_PROXY),

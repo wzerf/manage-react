@@ -6,7 +6,7 @@ export interface UserState {
     // 核心状态
     userInfo: BasicUserInfo | null;
     userRoles: string[];         // 角色码（来自 userInfo.roles）
-    accessCodes: string[];       // 权限码（来自 GetMyPermissionCode）
+    accessCodes: string[];       // 权限码（来自 GET /auth/codes）
 
     // 计算属性（函数形式，React 中不需要 computed）
     tenantId: number | null;

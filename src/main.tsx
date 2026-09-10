@@ -1,3 +1,6 @@
+// 注册 ALTCHA PoW widget 自定义元素（<altcha-widget>）供登录页人机校验
+import 'altcha';
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App as AntdApp } from 'antd';

@@ -41,7 +41,7 @@ interface RequestClientCallbacks {
   /** 获取当前语言标识（如 zh-CN、en-US） */
   getLocale?: () => string;
   /** 刷新 token，返回新的 access token */
-  refreshToken: () => Promise<string>;
+  refreshToken?: () => Promise<string>;
   /** Token 彻底失效时的处理（登出 + 跳转登录页） */
   onReAuthenticate: (redirect?: boolean) => Promise<void>;
   /** 错误消息处理（弹窗、toast 等） */
