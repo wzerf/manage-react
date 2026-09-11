@@ -1,18 +1,22 @@
 import type {PluginOption} from 'vite';
-import path from 'path';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import AutoImport from 'unplugin-auto-import/vite';
 
-/**
- * 自动导入处理
- */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const appRoot = path.resolve(__dirname, '../..');
+
 export const autoImportPlugin = (): PluginOption => {
+    const toPosix = (p: string) => p.replace(/\\/g, '/');
+    const srcDir = toPosix(path.join(appRoot, 'src'));
     return AutoImport({
         dirs: [
-            'src/hooks/**',
-            'src/components/**',
-            'src/stores/**',
-            '!src/components/common/Editor/index.ts',
-            '!src/components/common/Editor/src/TiptapEditor/index.ts',
+            `${srcDir}/hooks/**`,
+            `${srcDir}/components/**`,
+            `${srcDir}/stores/**`,
+            `!${srcDir}/components/common/Editor/index.ts`,
+            `!${srcDir}/components/common/Editor/src/TiptapEditor/index.ts`,
             '!**/*.md',
         ],
         imports: [
@@ -21,15 +25,12 @@ export const autoImportPlugin = (): PluginOption => {
             'react-i18next',
             {from: 'react', imports: ['FC'], type: true},
         ],
-        dts: 'src/auto-imports.d.ts',
+        dts: path.join(appRoot, 'src/auto-imports.d.ts'),
         include: [/\.[tj]sx?$/],
         resolvers: [
             (name) => {
-                // 处理 @/ 开头的路径别名
                 if (name.startsWith('@/')) {
-                    return {
-                        from: name.replace('@/', path.resolve(__dirname, 'src/') + '/'),
-                    };
+                    return {from: name.replace('@/', `${srcDir}/`)};
                 }
             },
         ],

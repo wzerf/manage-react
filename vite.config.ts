@@ -1,20 +1,26 @@
 import {defineConfig, loadEnv} from 'vite';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 import {handleEnv, createProxy, createVitePlugins, buildOptions} from './build';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // https://vitejs.dev/config/
 export default defineConfig(({mode}) => {
-    const root = process.cwd();
+    const root = __dirname;
     const env = loadEnv(mode, root);
     const viteEnv = handleEnv(env);
     const {VITE_SERVER_PORT, VITE_PROXY} = viteEnv;
 
     return {
+        root,
         base: '/',
         plugins: createVitePlugins(),
         resolve: {
             alias: {
-                '@': '/src',
+                '@': path.join(root, 'src'),
             },
         },
         css: {
