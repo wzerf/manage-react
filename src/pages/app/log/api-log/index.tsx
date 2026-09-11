@@ -4,6 +4,7 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { listApiLogsApi } from '@/api/rest/api-log';
 import type { ApiLogListItem, ApiLogSource } from '@/api/rest/types';
+import { TABLE } from '@/config/constants';
 import { formatDateTime } from '@/utils/date';
 import ApiLogDetailDrawer from './modules/detail-drawer';
 
@@ -165,7 +166,7 @@ export function ApiLogPanel() {
           onClick: () => openDetail(record),
           style: { cursor: 'pointer' },
         })}
-        search={{ labelWidth: 'auto', defaultCollapsed: false }}
+        search={{ ...TABLE.SEARCH, defaultCollapsed: false }}
         pagination={{ defaultPageSize: 20, showSizeChanger: true }}
         options={{ density: true, reload: true, setting: true }}
         toolbar={{

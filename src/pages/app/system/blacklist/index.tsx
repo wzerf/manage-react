@@ -27,6 +27,7 @@ import type {
   BlacklistTargetType,
 } from '@/api/rest/types';
 import { useDictLookups } from '@/api/hooks/dict';
+import { TABLE } from '@/config/constants';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import BlacklistFormDrawer from './modules/blacklist-form-drawer';
 import { getApiErrorMessage } from './modules/error-message';
@@ -375,7 +376,7 @@ const BlacklistPage = () => {
         actionRef={actionRef}
         columns={columns}
         request={fetchRows}
-        search={{ labelWidth: 'auto' }}
+        search={{ ...TABLE.SEARCH }}
         pagination={{
           defaultPageSize: 20,
           showSizeChanger: true,

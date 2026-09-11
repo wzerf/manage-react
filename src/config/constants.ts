@@ -48,6 +48,14 @@ export const TABLE = {
     /** 额外边距 */
     OFFSET: 16,
   },
+  /**
+   * ProTable 搜索栏。
+   * 不要用 labelWidth:'auto'：QueryFilter 会跳过 nowrap，窄列里标签掉到输入框上方。
+   * 96px 够放下 4～5 个汉字标签，字段输入起点对齐。
+   */
+  SEARCH: {
+    labelWidth: 96,
+  },
 } as const;
 
 // ========== 布局高度配置 ==========

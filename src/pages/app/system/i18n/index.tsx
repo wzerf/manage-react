@@ -36,6 +36,7 @@ import type {
   I18nTranslation,
   I18nTranslationKey,
 } from '@/api/rest/types';
+import { TABLE } from '@/config/constants';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import { formatDateTime } from '@/utils/date';
 import I18nLocaleDrawer from './modules/locale-drawer';
@@ -896,7 +897,7 @@ const I18nPage = () => {
             rowKey="id"
             actionRef={localeActionRef}
             columns={localeColumns}
-            search={{ labelWidth: 'auto' }}
+            search={{ ...TABLE.SEARCH }}
             request={fetchLocaleRows}
             pagination={{
               defaultPageSize: 10,
@@ -948,7 +949,7 @@ const I18nPage = () => {
               rowKey="translationKey"
               actionRef={translationKeyActionRef}
               columns={translationKeySearchColumns}
-              search={{ labelWidth: 'auto' }}
+              search={{ ...TABLE.SEARCH }}
               request={fetchTranslationKeyRows}
               pagination={{
                 defaultPageSize: 20,
@@ -1011,7 +1012,7 @@ const I18nPage = () => {
               rowKey="id"
               actionRef={translationActionRef}
               columns={translationSearchColumns}
-              search={{ labelWidth: 'auto' }}
+              search={{ ...TABLE.SEARCH }}
               request={fetchTranslationRows}
               pagination={{
                 defaultPageSize: 20,

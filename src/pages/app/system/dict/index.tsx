@@ -17,6 +17,7 @@ import { batchDictDataApi, listDictDataApi } from '@/api/rest/dict-data';
 import { batchDictTypeApi, listDictTypeApi } from '@/api/rest/dict-type';
 import type { DictData, DictType } from '@/api/rest/types';
 import { queryClient } from '@/core';
+import { TABLE } from '@/config/constants';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import { formatDateTime } from '@/utils/date';
 import DictDataDrawer from './modules/dict-data-drawer';
@@ -273,7 +274,7 @@ const DictPage = () => {
                 onChange: setTypeSelectedKeys,
               }}
               tableAlertRender={false}
-              search={{ labelWidth: 'auto' }}
+              search={{ ...TABLE.SEARCH }}
               pagination={{ defaultPageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
               scroll={{ x: 800 }}
               onRow={(record) => ({
@@ -359,7 +360,7 @@ const DictPage = () => {
                 onChange: setDataSelectedKeys,
               }}
               tableAlertRender={false}
-              search={{ labelWidth: 'auto' }}
+              search={{ ...TABLE.SEARCH }}
               pagination={{ defaultPageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
               scroll={{ x: 900 }}
               request={async (params) => {

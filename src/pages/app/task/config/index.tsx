@@ -17,6 +17,7 @@ import {
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { useTranslation } from 'react-i18next';
+import { TABLE } from '@/config/constants';
 import {
   batchTaskConfigApi,
   deleteTaskConfigApi,
@@ -407,7 +408,7 @@ export function TaskConfigPanel() {
         rowKey="id"
         columns={columns}
         request={fetchRows}
-        search={{ labelWidth: 'auto', defaultCollapsed: false }}
+        search={{ ...TABLE.SEARCH, defaultCollapsed: false }}
         pagination={{ defaultPageSize: 20, showSizeChanger: true }}
         options={{ density: true, reload: true, setting: true }}
         toolBarRender={toolbar}

@@ -9,6 +9,7 @@ import type { TaskExecution, TaskExecutionStatus } from '@/api/rest/types';
 import { useListTaskWorkflowTypes } from '@/api/hooks/task-config';
 import { onTaskExecutionChanged } from '../modules/events';
 import TaskExecutionDetailDrawer from './modules/detail-drawer';
+import { TABLE } from '@/config/constants';
 import { formatDateTime } from '@/utils/date';
 import { formatDuration, statusColor, statusLabelKey } from './modules/shared';
 
@@ -213,7 +214,7 @@ export function TaskExecutionPanel() {
           onClick: () => openDetail(record),
           style: { cursor: 'pointer' },
         })}
-        search={{ labelWidth: 'auto', defaultCollapsed: false }}
+        search={{ ...TABLE.SEARCH, defaultCollapsed: false }}
         pagination={{ defaultPageSize: 20, showSizeChanger: true }}
         options={{ density: true, reload: true, setting: true }}
         dateFormatter="string"

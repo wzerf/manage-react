@@ -291,74 +291,107 @@ html[data-theme='dark'] .ant-form .ant-input:not(.ant-input-affix-wrapper .ant-i
   box-shadow: 0 0 0 3px rgba(0, 107, 230, 0.12) !important;
 }
 
-/* ========== 搜索按钮与输入框等高（通用） ========== */
-.ant-pro-table-search .ant-btn {
-  height: 2.75rem;
+/* ========== 搜索表单布局 ==========
+   QueryFilter 按「搜索卡片容器宽度」切 layout（不是视口）：
+   <717px → 2 列 vertical；<1078px → 3 列 horizontal。
+   分栏页（i18n / 字典）半宽卡片经常落在 vertical：标签在上、
+   查询按钮被垂直居中，和输入框错位。labelWidth:'auto' 还会跳过
+   Pro 自带的 nowrap。
+
+   策略：表单项强制「标签 | 控件」同一行；操作列与输入框底对齐；
+   只在搜索卡片本身极窄时（container query）改为上下结构。 */
+
+.ant-pro-table-search {
+  container-type: inline-size;
+  container-name: pro-table-search;
 }
 
-/* ========== 搜索表单布局：回归 antd v6 原生栅格 ==========
-   历史版本在此叠过 flex:1 0 auto / gap:0 / align-items 等 hack，
-   与 v6 栅格打架导致 Col 塌缩（Select 缩成一条线）、form-item
-   退化为 block（标签堆到输入框上方）。现已全部拆除，只保留
-   以下保护性规则，布局交给 antd 默认（col-span 栅格 + 水平 form-item）。 */
+.ant-pro-query-filter .ant-pro-query-filter-row,
+.ant-pro-table-search .ant-row {
+  align-items: flex-end;
+}
 
-/* 输入类控件撑满所属 Col；min-width 保证"请输入/请选择"有呼吸空间 */
+/* 输入类控件撑满所属 Col；min-width:0 允许在分栏里收缩，避免把标签挤下去 */
 .ant-pro-table-search .ant-picker,
 .ant-pro-table-search .ant-select,
 .ant-pro-table-search .ant-input-affix-wrapper,
 .ant-pro-table-search .ant-input {
   width: 100%;
-  min-width: 160px;
+  min-width: 0;
 }
 
-/* Label 不换行，与控件保持水平同行。
-   双类选择器（.ant-form-item.ant-form-item）提特异性：antd v6 cssVar 层的
-   .ant-form-item { flex-wrap: wrap } 与单类规则平手且后注入会翻盘 */
-.ant-pro-table-search .ant-form-item.ant-form-item {
+/* 双类选择器压过 antd v6 cssVar 的 flex-wrap:wrap / vertical 的 column。
+   必须排除 hidden：QueryFilter 折叠时仍渲染字段，只靠 display:none 隐藏。
+   若这里强行 flex，折叠项会重新占位，把查询按钮挤到下一行左侧。 */
+.ant-pro-table-search .ant-form-item.ant-form-item:not(.ant-form-item-hidden) {
   display: flex;
+  flex-direction: row;
   align-items: center;
   flex-wrap: nowrap;
 }
+.ant-pro-table-search .ant-form-item-hidden {
+  display: none !important;
+}
 .ant-pro-table-search .ant-form-item-label.ant-form-item-label {
-  flex: 0 0 auto;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: none !important;
+  padding-bottom: 0 !important;
+  text-align: start;
+}
+/* QueryFilter 在半宽卡片里会切 vertical，上面虽改回同行，标签宽仍随文案变化。
+   固定 96px，与 TABLE.SEARCH.labelWidth 对齐，同一行多个字段的输入起点才齐。 */
+.ant-pro-table-search .ant-form-vertical .ant-form-item-label.ant-form-item-label {
+  flex: 0 0 96px !important;
+  width: 96px !important;
 }
 .ant-pro-table-search .ant-form-item-label > label {
   white-space: nowrap;
+  height: 32px;
 }
 .ant-pro-table-search .ant-form-item-control {
   flex: 1 1 auto;
   min-width: 0;
+  max-width: none !important;
 }
 
-/* 查询/重置按钮组：紧凑排列、贴齐行尾 */
-.ant-pro-query-filter .ant-pro-query-filter-collapse,
-.ant-pro-table-search .ant-form-item:last-child {
+/* 查询/重置：丢掉占位空 label；操作列始终靠右（含换行后的第二行） */
+.ant-pro-query-filter-row > .ant-col:has(.ant-pro-query-filter-actions) {
+  margin-inline-start: auto !important;
+}
+.ant-pro-query-filter-actions.ant-form-item {
+  justify-content: flex-end;
+}
+.ant-pro-query-filter-actions .ant-form-item-label {
+  display: none;
+}
+.ant-pro-query-filter-actions .ant-form-item-control {
   flex: 0 0 auto;
-  margin-left: auto;
+  margin-inline-start: 0 !important;
 }
 .ant-pro-query-filter .ant-pro-query-filter-collapse {
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
-/* ========== 窄容器响应式：搜索表单优雅降级为上下结构 ==========
-   Col 在窄屏下不足以水平容纳 label + 160px 输入框（antd v6 form-item
-   默认 flex-wrap:wrap 会粗暴换行导致标签悬空）——主动切换为规范的
-   垂直结构（与 Drawer 表单同款：label 在上、8px 间距、灰色标签） */
-@media (max-width: 1024px) {
-  .ant-pro-table-search .ant-form-item.ant-form-item {
+/* 搜索卡片本身极窄（含分栏里的半宽表）才改为标签在上 */
+@container pro-table-search (max-width: 480px) {
+  .ant-form-item.ant-form-item {
     flex-direction: column;
     align-items: stretch;
-    flex-wrap: nowrap;
   }
-  .ant-pro-table-search .ant-form-item-label.ant-form-item-label {
-    padding-bottom: 8px;
+  .ant-form-item-label.ant-form-item-label {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    padding-bottom: 4px !important;
     text-align: left;
   }
-  .ant-pro-table-search .ant-form-item-label > label {
+  .ant-form-item-label > label {
     height: auto;
   }
-  [data-theme='dark'] .ant-pro-table-search .ant-form-item-label > label {
+  [data-theme='dark'] .ant-form-item-label > label {
     color: #c9d1d9;
   }
 }

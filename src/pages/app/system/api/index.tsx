@@ -17,6 +17,7 @@ import {
 } from '@/api/hooks/api';
 import { listApisApi } from '@/api/rest/api';
 import type { HttpMethod, SysApi } from '@/api/rest/types';
+import { TABLE } from '@/config/constants';
 import { formatDateTime } from '@/utils/date';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import ApiFormDrawer from './modules/api-form-drawer';
@@ -321,7 +322,7 @@ const ApiPage = () => {
         columns={columns}
         request={fetchApiRows}
         onDataSourceChange={(ds) => setCurrentTree((ds as ApiTreeNode[]) ?? [])}
-        search={{ labelWidth: 'auto' }}
+        search={{ ...TABLE.SEARCH }}
         pagination={{
           // pageSize = 每页分组数（默认 20 组）；total 为分组数
           defaultPageSize: 20,

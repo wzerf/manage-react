@@ -10,6 +10,7 @@ import {
 import { useDeleteMenu, useUpdateMenu } from '@/api/hooks/menu';
 import { listMenusApi } from '@/api/rest/menu';
 import type { MenuType, SysMenu } from '@/api/rest/types';
+import { TABLE } from '@/config/constants';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import { useAccessRefreshStore } from '@/stores';
 import MenuFormDrawer, { type MenuFormKind } from './modules/menu-form-drawer';
@@ -251,7 +252,7 @@ const MenuPage = () => {
         columns={columns}
         request={fetchMenuRows}
         onDataSourceChange={(ds) => setCurrentTree((ds as SysMenu[]) ?? [])}
-        search={{ labelWidth: 'auto' }}
+        search={{ ...TABLE.SEARCH }}
         pagination={{
           // pageSize = 每页最外层根菜单数（默认 20）；total 为根数
           defaultPageSize: 20,

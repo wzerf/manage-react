@@ -6,6 +6,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { useDeleteRole } from '@/api/hooks/role';
 import { listRolesApi } from '@/api/rest/role';
 import type { SysRole } from '@/api/rest/types';
+import { TABLE } from '@/config/constants';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import RoleFormDrawer, { type RoleFormKind } from './modules/role-form-drawer';
 import RolePermissionDrawer from './modules/role-permission-drawer';
@@ -132,7 +133,7 @@ const RolePage = () => {
         actionRef={actionRef}
         columns={columns}
         request={fetchRoleRows}
-        search={{ labelWidth: 'auto' }}
+        search={{ ...TABLE.SEARCH }}
         pagination={{
           defaultPageSize: 20,
           showSizeChanger: true,

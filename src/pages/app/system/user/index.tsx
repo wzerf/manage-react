@@ -10,6 +10,7 @@ import {
 import { listUsersApi } from '@/api/rest/user';
 import type { UserListItem } from '@/api/rest/types';
 import { formatDateTime } from '@/utils/date';
+import { TABLE } from '@/config/constants';
 import ContentContainer from '@/layouts/components/PageContainer/ContentContainer';
 import UserFormDrawer, { type UserFormKind } from './modules/user-form-drawer';
 import ResetPasswordModal from './modules/reset-password-modal';
@@ -176,7 +177,7 @@ const UserPage = () => {
         actionRef={actionRef}
         columns={columns}
         request={fetchUserRows}
-        search={{ labelWidth: 'auto' }}
+        search={{ ...TABLE.SEARCH }}
         pagination={{
           defaultPageSize: 20,
           showSizeChanger: true,
