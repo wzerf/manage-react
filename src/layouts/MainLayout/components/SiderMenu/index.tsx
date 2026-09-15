@@ -1,8 +1,8 @@
 import { useMemo, useCallback, useState } from 'react';
 import { Menu } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 
+import { useRouteTitle } from '@/core/i18n';
 import { usePreferencesStore } from '@/core/preferences/store';
 import { getIconFromName } from '../../utils/iconResolver';
 import ControlPanel from './ControlPanel';
@@ -26,8 +26,7 @@ export const Index = ({
   onOpenChange,
 }: SiderMenuProps) => {
   const navigate = useNavigate();
-  const { i18n, t } = useTranslation();
-  const { t: tRoutes } = useTranslation('routes');
+  const translateLabel = useRouteTitle();
 
   const preferences = usePreferencesStore((state) => state.preferences);
   const setPreferences = usePreferencesStore((state) => state.setPreferences);
@@ -45,22 +44,6 @@ export const Index = ({
 
   // 转换菜单数据为 Ant Design Menu items 格式
   const menuItems = useMemo(() => {
-    /**
-     * 翻译菜单标题
-     * @param label - 可能是 i18n key 或普通文本
-     * @returns 翻译后的文本
-     */
-    const translateLabel = (label: string | undefined): string => {
-      if (!label) return '';
-      // 处理 'menu:xxx' 或 'routes:xxx' 前缀的 i18n key
-      if (label.startsWith('menu:') || label.startsWith('routes:')) {
-        const keyName = label.includes(':') ? label.substring(label.indexOf(':') + 1) : label;
-        return tRoutes(keyName, { defaultValue: label });
-      }
-      // 否则直接尝试翻译（可能已经是简化的 key）
-      return t(label, label);
-    };
-
     const transformItem = (items: any[]): any[] => {
       return items.map((item) => ({
         key: item.path || item.key,
@@ -70,7 +53,7 @@ export const Index = ({
       }));
     };
     return transformItem(menuData);
-  }, [menuData, t, i18n.language]); // 添加 i18n.language 依赖，语言切换时重新翻译
+  }, [menuData, translateLabel]);
 
   // 菜单点击
   const handleMenuClick = useCallback(

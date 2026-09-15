@@ -3,7 +3,7 @@ import React from 'react';
 import { useMatches, useNavigate } from 'react-router-dom';
 import { getIconFromName } from '@/layouts/MainLayout/utils/iconResolver';
 
-import { useI18n } from '@/core/i18n';
+import { useI18n, useRouteTitle } from '@/core/i18n';
 import type { BreadcrumbItem } from '../types';
 
 interface UseBreadcrumbOptions {
@@ -29,6 +29,7 @@ export const useBreadcrumb = ({
   const navigate = useNavigate();
   const matches = useMatches();
   const { t } = useI18n('common');
+  const translateTitle = useRouteTitle();
 
   // 手动传入优先
   if (manual === false) return false;
@@ -57,7 +58,9 @@ export const useBreadcrumb = ({
       .filter((match: MatchWithHandle) => match.handle?.title || match.pathname === '/')
       .map((match: MatchWithHandle, index: number, arr: MatchWithHandle[]) => {
         const isLast = index === arr.length - 1;
-        const title = match.handle?.title || route?.meta?.title || t('pageContainer.defaultTitle');
+        const rawTitle =
+          match.handle?.title || route?.meta?.title || t('pageContainer.defaultTitle');
+        const title = translateTitle(rawTitle);
         
         // 将图标字符串转换为 React 组件（支持 Iconify 和 Ant Design）
         let icon: React.ReactNode = undefined;
@@ -85,5 +88,5 @@ export const useBreadcrumb = ({
     }
 
     return items;
-  }, [matches, route?.meta?.title, navigate, showHomeIcon, showIcon]);
+  }, [matches, route?.meta?.title, navigate, t, translateTitle, showHomeIcon, showIcon]);
 };

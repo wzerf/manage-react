@@ -6,15 +6,14 @@ import { createLazyRoute } from '@/core/router';
  */
 export const taskRoutes: AppRouteObject[] = [
   {
-    name: 'task',
-    path: 'task',
+    name: 'Task',
+    path: '/task',
     element: createLazyRoute(() => import('@/pages/app/task')),
     meta: {
       title: 'routes:task',
       icon: 'lucide:timer',
       order: 2003,
       keepAlive: true,
-      // 与 Vue 前端路由一致：侧栏不按权限码二次过滤；页内 Tab 再按码分别显隐
       fullPathKey: false,
     },
   },

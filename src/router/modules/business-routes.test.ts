@@ -20,23 +20,23 @@ describe('frontend business route modules', () => {
     const names = collectNames(systemRoutes);
     expect(names).toEqual(
       expect.arrayContaining([
-        'system',
-        'systemUser',
-        'systemRole',
-        'systemDict',
-        'systemI18n',
-        'systemMenu',
-        'systemApi',
-        'systemBlacklist',
+        'System',
+        'SystemUser',
+        'SystemRole',
+        'SystemDict',
+        'SystemI18n',
+        'SystemMenu',
+        'SystemApi',
+        'SystemBlacklist',
       ]),
     );
     expect(systemRoutes[0]?.meta?.authority).toBeUndefined();
   });
 
   it('registers log and task as ungated sidebar entries', () => {
-    expect(logRoutes[0]?.name).toBe('log');
+    expect(logRoutes[0]?.name).toBe('Log');
     expect(logRoutes[0]?.meta?.authority).toBeUndefined();
-    expect(taskRoutes[0]?.name).toBe('task');
+    expect(taskRoutes[0]?.name).toBe('Task');
     expect(taskRoutes[0]?.meta?.authority).toBeUndefined();
   });
 

@@ -1,3 +1,4 @@
+export * from './flatten-absolute-routes';
 export * from './inject-redirect';
 export * from './lazy';
 export * from './loader';

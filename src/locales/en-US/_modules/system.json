@@ -1,0 +1,24 @@
+{
+  "title": "System",
+  "user": {
+    "title": "User Management"
+  },
+  "role": {
+    "title": "Role Management"
+  },
+  "dict": {
+    "title": "Dict Management"
+  },
+  "i18n": {
+    "title": "i18n"
+  },
+  "menu": {
+    "title": "Menu Management"
+  },
+  "api": {
+    "title": "API Management"
+  },
+  "blacklist": {
+    "title": "Access Blacklist"
+  }
+}

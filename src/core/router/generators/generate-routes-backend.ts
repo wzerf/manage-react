@@ -13,32 +13,43 @@ import type {AppRouteObject, BackendRoute, ComponentRecord, GenerateRoutesOption
 export async function generateRoutesByBackend(
     options: GenerateRoutesOptions
 ): Promise<AppRouteObject[]> {
-    const {fetchMenuListAsync, layoutMap = {}, pageMap = {}} = options;
+    const {fetchMenuListAsync, layoutMap = {}, pageMap = {}, forbiddenElement} = options;
 
     try {
-        // 1. 从后端获取菜单路由（组件路径为字符串）
         const menuRoutes = await fetchMenuListAsync?.();
         if (!menuRoutes?.length) {
             return [];
         }
 
-        // 2. 预处理 pageMap：标准化路径键名（支持多种写法）
         const normalizedPageMap: ComponentRecord = {};
         for (const [key, value] of Object.entries(pageMap)) {
             const normalizedKey = normalizeViewPath(key);
             normalizedPageMap[normalizedKey] = value;
-            // 兼容：如果传入的是带后缀的，也注册不带后缀的映射
             if (normalizedKey.endsWith('.tsx')) {
                 normalizedPageMap[normalizedKey.replace(/\.tsx$/, '')] = value;
             }
         }
 
-        // 3. 递归转换路由树
-        return convertRoutes(menuRoutes, layoutMap, normalizedPageMap);
+        let routes = convertRoutes(menuRoutes, layoutMap, normalizedPageMap);
+
+        if (forbiddenElement) {
+            routes = mapTree(routes, (route: AppRouteObject) => {
+                if (menuHasVisibleWithForbidden(route)) {
+                    return {...route, element: forbiddenElement};
+                }
+                return route;
+            });
+        }
+
+        return routes;
     } catch (error) {
         console.error('Failed to generate routes from backend:', error);
-        return [];
+        throw error as Error;
     }
+}
+
+function menuHasVisibleWithForbidden(route: AppRouteObject): boolean {
+    return !!(route.meta as Record<string, unknown> | undefined)?.menuVisibleWithForbidden;
 }
 
 /**
@@ -54,7 +65,7 @@ function convertRoutes(
     return mapTree(routes, (node) => {
         const {component: componentPath, name, ...rest} = node;
 
-        if (!name) {
+        if (!name && !rest.index) {
             console.error('Route name is required', node);
         }
 
@@ -89,19 +100,27 @@ function convertRoutes(
                 }
             }
 
-            // 3. 渲染元素：必须用 Suspense 包裹 lazy 组件
             if (Component) {
                 route.element = createElement(
                     Suspense,
                     {fallback: createElement(Loading)},
                     createElement(Component)
                 );
-            } else {
-                // 开发环境警告，生产环境降级处理
+            } else if (componentPath) {
                 if (import.meta.env.DEV) {
                     console.warn(`Component not found for path: ${componentPath}`);
                 }
-                route.element = createElement('div', null, `404 - Component "${componentPath}" not found`);
+                const fallbackKey = '/_core/fallback/not-found';
+                const Fallback = pageMap[fallbackKey] ?? pageMap[`${fallbackKey}.tsx`];
+                if (Fallback) {
+                    route.element = createElement(
+                        Suspense,
+                        {fallback: createElement(Loading)},
+                        createElement(Fallback)
+                    );
+                } else {
+                    route.element = createElement('div', null, `404 - Component "${componentPath}" not found`);
+                }
             }
         }
 
@@ -131,15 +150,13 @@ function convertRoutes(
  * @param path - 后端返回的组件路径，如 "./views/system/user" 或 "/views/dashboard"
  */
 export function normalizeViewPath(path: string): string {
-    // 1. 去除相对路径前缀
     const normalized = path.replace(/^(\.\/|\.\.\/)+/, '');
-
-    // 2. 确保以 / 开头
     const withSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
-
-    // 3. 去除目录前缀（适配 React 项目结构）
-    // 支持多种常见目录：/views, /pages, /src/pages 等
+    // Mock/DB 已归一为 "/dashboard/..." 等；对齐 Vue 仅去 /views 前缀的做法，
+    // 使 "../pages/app/..." 与 "/dashboard/..." 统一落到 "/dashboard/..."。
+    // 额外支持 /src/views、/pages/app 只是为了兼容历史 glob key。
     return withSlash
-        .replace(/^\/(src\/)?(views|pages)\//i, '/')  // 去除 /views/ 或 /pages/
-        .replace(/\/+$/, '');                          // 去除末尾斜杠
+        .replace(/^\/(src\/)?views\//, '/')
+        .replace(/^\/(src\/)?pages(\/app)?\//i, '/')
+        .replace(/\/+$/, '');
 }

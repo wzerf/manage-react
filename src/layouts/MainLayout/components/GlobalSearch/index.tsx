@@ -7,10 +7,9 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 
 import type { AppMenu } from '@/core/router/types';
-import { useI18n } from '@/core/i18n';
+import { useI18n, useRouteTitle } from '@/core/i18n';
 import { usePreferencesStore } from '@/core/preferences/store';
 import { getIconFromName } from '@/layouts/MainLayout/utils/iconResolver';
 import { isHttpUrl } from '@/utils/inference';
@@ -86,7 +85,7 @@ function uniqueByPath(items: SearchMenuItem[]): SearchMenuItem[] {
  */
 export function GlobalSearch({ menus, isDark = false }: GlobalSearchProps) {
   const { t } = useI18n('common');
-  const { t: tRoutes } = useTranslation('routes');
+  const translateLabel = useRouteTitle();
   const navigate = useNavigate();
   const inputRef = useRef<InputRef>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -100,22 +99,6 @@ export function GlobalSearch({ menus, isDark = false }: GlobalSearchProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [history, setHistory] = useState<SearchMenuItem[]>(() => loadHistory());
   const isNavigatingRef = useRef(false);
-
-  const translateLabel = useCallback(
-    (label: string | undefined): string => {
-      if (!label) return '';
-      if (label.startsWith('menu:') || label.startsWith('routes:')) {
-        const keyName = label.substring(label.indexOf(':') + 1);
-        return tRoutes(keyName, { defaultValue: label });
-      }
-      if (label.includes('.')) {
-        const translated = tRoutes(label, { defaultValue: '' });
-        if (translated) return translated;
-      }
-      return tRoutes(label, { defaultValue: label });
-    },
-    [tRoutes],
-  );
 
   /** 扁平化菜单树为可搜索项（只保留有 path 的节点） */
   const searchItems = useMemo(() => {
@@ -142,11 +125,15 @@ export function GlobalSearch({ menus, isDark = false }: GlobalSearchProps) {
   const results = useMemo(() => {
     const key = keyword.trim();
     if (!key) {
-      return uniqueByPath(history);
+      // 历史记录可能残留旧版本未翻译的 key，展示前再解析一次
+      return uniqueByPath(history).map((item) => ({
+        ...item,
+        name: translateLabel(item.name),
+      }));
     }
     const reg = createSearchReg(key.toLowerCase());
     return searchItems.filter((item) => reg.test(item.name.toLowerCase()));
-  }, [keyword, history, searchItems]);
+  }, [keyword, history, searchItems, translateLabel]);
 
   const close = useCallback(() => {
     setOpen(false);

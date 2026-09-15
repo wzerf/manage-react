@@ -308,6 +308,7 @@ class RequestClient {
       authenticateResponseInterceptor({
         client: this,
         doReAuthenticate: async () => {
+          if (!callbacks.getToken?.()) return;
           console.warn('Token expired, redirecting to login...');
           if (callbacks.onReAuthenticate) {
             await callbacks.onReAuthenticate(true);

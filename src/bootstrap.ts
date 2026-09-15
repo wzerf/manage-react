@@ -1,4 +1,4 @@
-import { message } from 'antd';
+import { appMessage as message } from '@/utils/app-message';
 import { initI18n } from '@/core/i18n';
 import { fetchBackendI18n } from '@/core/i18n/utils';
 import { usePreferencesStore } from '@/core/preferences';
@@ -11,6 +11,8 @@ import type { SupportedLocale } from '@/locales';
  * 应用启动初始化
  */
 export async function bootstrap() {
+  const { resetAccessModeFromEnv } = await import('@/core/preferences/store');
+  resetAccessModeFromEnv();
   useAuthStore.getState().hydrate();
 
   await _initI18n();

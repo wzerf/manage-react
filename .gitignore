@@ -26,3 +26,4 @@ dist-ssr
 .env.*.local
 .env.example
 .env.*.example
+dummy-non-existing-folder/

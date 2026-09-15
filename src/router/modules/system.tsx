@@ -9,8 +9,8 @@ import { createLazyRoute } from '@/core/router';
  */
 export const systemRoutes: AppRouteObject[] = [
   {
-    name: 'system',
-    path: 'system',
+    name: 'System',
+    path: '/system',
     meta: {
       title: 'routes:system',
       icon: 'lucide:settings',
@@ -18,13 +18,7 @@ export const systemRoutes: AppRouteObject[] = [
     },
     children: [
       {
-        name: 'systemIndex',
-        index: true,
-        element: <Navigate to="user" replace />,
-        meta: { hideInMenu: true, hideInTab: true },
-      },
-      {
-        name: 'systemUser',
+        name: 'SystemUser',
         path: 'user',
         element: createLazyRoute(() => import('@/pages/app/system/user')),
         meta: {
@@ -34,7 +28,7 @@ export const systemRoutes: AppRouteObject[] = [
         },
       },
       {
-        name: 'systemRole',
+        name: 'SystemRole',
         path: 'role',
         element: createLazyRoute(() => import('@/pages/app/system/role')),
         meta: {
@@ -44,7 +38,7 @@ export const systemRoutes: AppRouteObject[] = [
         },
       },
       {
-        name: 'systemDict',
+        name: 'SystemDict',
         path: 'dict',
         element: createLazyRoute(() => import('@/pages/app/system/dict')),
         meta: {
@@ -54,7 +48,7 @@ export const systemRoutes: AppRouteObject[] = [
         },
       },
       {
-        name: 'systemI18n',
+        name: 'SystemI18n',
         path: 'i18n',
         element: createLazyRoute(() => import('@/pages/app/system/i18n')),
         meta: {
@@ -64,7 +58,7 @@ export const systemRoutes: AppRouteObject[] = [
         },
       },
       {
-        name: 'systemMenu',
+        name: 'SystemMenu',
         path: 'menu',
         element: createLazyRoute(() => import('@/pages/app/system/menu')),
         meta: {
@@ -74,7 +68,7 @@ export const systemRoutes: AppRouteObject[] = [
         },
       },
       {
-        name: 'systemApi',
+        name: 'SystemApi',
         path: 'api',
         element: createLazyRoute(() => import('@/pages/app/system/api')),
         meta: {
@@ -84,7 +78,7 @@ export const systemRoutes: AppRouteObject[] = [
         },
       },
       {
-        name: 'systemBlacklist',
+        name: 'SystemBlacklist',
         path: 'blacklist',
         element: createLazyRoute(() => import('@/pages/app/system/blacklist')),
         meta: {

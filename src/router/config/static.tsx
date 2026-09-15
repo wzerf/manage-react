@@ -22,11 +22,10 @@ export const staticRoutes: AppRouteObject[] = [
       hideInTab: true,
     },
     children: [
-      // 根路径重定向到 dashboard
       {
         path: '/',
         index: true,
-        element: <Navigate to="/dashboard" replace />,
+        element: <Navigate to="/dashboard/analytics" replace />,
         meta: { title: 'routes:home', hideInMenu: true, hideInTab: true },
       },
     ],

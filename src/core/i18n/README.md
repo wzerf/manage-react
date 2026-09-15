@@ -6,7 +6,7 @@
 
 ### 核心特性
 
-- **命名空间分离**：`_core/` 存放全局翻译（common/auth/routes/editor），`_modules/` 按功能模块拆分（共 27 个业务模块）
+- **命名空间分离**：`_core/` 存放全局翻译（common/auth/routes/editor），`_modules/` 按功能模块拆分（业务模块 + 后端菜单标题命名空间）
 - **静态预加载**：所有 JSON 通过 `import.meta.glob({ eager: true })` 同步加载，无运行时请求
 - **双语支持**：`zh-CN`（简体中文）和 `en-US`（英语）
 - **语言检测**：localStorage → 浏览器语言 → 默认语言三级回退
@@ -42,14 +42,13 @@ src/locales/                         # 翻译资源
 │   │   ├── auth.json                # 认证相关（登录/注册/Token 过期等）
 │   │   ├── routes.json              # 路由标题（侧边栏/标签页/面包屑）
 │   │   └── editor.json              # 富文本编辑器
-│   └── _modules/                    # 业务模块命名空间（27 个 JSON）
-│       ├── dashboard.json
-│       ├── user.json
-│       ├── role.json
-│       ├── permission.json
-│       ├── menu.json
-│       ├── ...（共 27 个）
-│       └── preferences.json
+│   └── _modules/                    # 业务模块命名空间
+│       ├── dashboard.json           # 仪表盘
+│       ├── task.json                # 任务调度
+│       ├── blacklist.json           # 访问黑名单
+│       ├── page.json                # 后端菜单 page.* 标题
+│       ├── system.json              # 后端菜单 system.* 标题
+│       └── log.json                 # 后端菜单 log.* 标题
 └── en-US/                           # 与 zh-CN 完全对称
     ├── index.ts
     ├── _core/
@@ -60,7 +59,7 @@ src/locales/                         # 翻译资源
 
 ```typescript
 // Hook（组件内推荐）
-import { useI18n, useLocaleSync } from '@/core/i18n';
+import { useI18n, useLocaleSync, useRouteTitle } from '@/core/i18n';
 
 // 工具函数
 import { formatDate, formatNumber, detectBrowserLocale } from '@/core/i18n';
@@ -149,11 +148,10 @@ const { t } = useI18n('my-module');
 |------|------|----------|------|
 | 核心 | `_core/` | `common` | 通用 UI 文本（按钮、错误码、请求状态） |
 | 核心 | `_core/` | `auth` | 登录/注册/Token 相关 |
-| 核心 | `_core/` | `routes` | 路由标题（侧边栏、标签页、面包屑） |
+| 核心 | `_core/` | `routes` | 前端静态路由标题（侧边栏、标签页、面包屑） |
 | 核心 | `_core/` | `editor` | 富文本编辑器 |
-| 业务模块 | `_modules/` | `dashboard`、`user`、`role` 等 | 按功能模块独立 |
-| 业务模块 | `_modules/` | `preferences` | 偏好设置面板 |
-| 业务模块 | `_modules/` | `menu` | 菜单管理界面 |
+| 业务模块 | `_modules/` | `dashboard`、`task`、`blacklist` | 按功能模块独立 |
+| 后端菜单 | `_modules/` | `page`、`system`、`log` | 后端 `/menu/all` 下发标题的首段命名空间 |
 
 ### 命名空间使用规则
 
@@ -169,7 +167,7 @@ const { t } = useI18n();
 t('user:username');    // 虽然能工作，但不符合项目规范
 ```
 
-**2. 路由标题使用 `routes` 命名空间**
+**2. 前端静态路由标题使用 `routes` 命名空间**
 
 路由的 `meta.title` 使用 `'routes:xxx'` 格式，由路由/菜单系统自动解析：
 
@@ -182,14 +180,19 @@ t('user:username');    // 虽然能工作，但不符合项目规范
 }
 ```
 
-**3. 菜单管理 UI 文本使用 `menu` 命名空间**
+**3. 后端下发的菜单标题按下发 key 的首段作命名空间**
 
-菜单管理功能页面的文本使用 `menu` 命名空间，与路由标题的 `routes` 命名空间分离，避免冲突。
+`/menu/all` 返回的 `meta.title` 是形如 `system.user.title` 的点号 key，
+首段即命名空间、其余为键名（与 `utils/backend.ts` 的合并规则一致）：
 
-```tsx
-const { t } = useI18n('menu');
-t('pageTitle');  // 菜单管理页面标题
-```
+| 后端 key | 命名空间 | 键名 | 文件 |
+|----------|----------|------|------|
+| `page.dashboard.title` | `page` | `dashboard.title` | `_modules/page.json` |
+| `system.user.title` | `system` | `user.title` | `_modules/system.json` |
+| `log.title` | `log` | `title` | `_modules/log.json` |
+| `task.title` | `task` | `title` | `_modules/task.json` |
+
+组件内解析这类标题请统一使用 `useRouteTitle()`，不要自行判断前缀（见「路由标题格式」）。
 
 **4. 默认命名空间为 `common`**
 
@@ -207,9 +210,12 @@ t('button.ok');  // 查找 common 命名空间
 | `auth` | `_core/auth.json` |
 | `routes` | `_core/routes.json` |
 | `editor` | `_core/editor.json` |
-| `user` | `_modules/user.json` |
-| `role` | `_modules/role.json` |
-| `preferences` | `_modules/preferences.json` |
+| `dashboard` | `_modules/dashboard.json` |
+| `task` | `_modules/task.json` |
+| `blacklist` | `_modules/blacklist.json` |
+| `page` | `_modules/page.json` |
+| `system` | `_modules/system.json` |
+| `log` | `_modules/log.json` |
 | ... | `_modules/<name>.json` |
 
 > 命名空间名 = JSON 文件名（不含 `.json` 后缀）。
@@ -245,6 +251,31 @@ const { t } = useI18n(['user', 'common']);
 t('username');       // 优先查找 user 命名空间
 t('button.ok');      // user 中找不到时回退到 common
 ```
+
+### `useRouteTitle()` — 路由/菜单标题翻译 Hook
+
+侧边栏、标签页、面包屑、页面标题等所有展示路由标题的地方都应使用它，
+它统一了前端静态路由 key、后端下发 key 与普通文本三种来源：
+
+```tsx
+import { useRouteTitle } from '@/core/i18n';
+
+const translateTitle = useRouteTitle();
+
+translateTitle('routes:systemUser');   // → t('systemUser', { ns: 'routes' })
+translateTitle('system.user.title');   // → t('user.title', { ns: 'system' })
+translateTitle('数据看板');             // → 原样返回
+translateTitle(undefined);             // → ''
+```
+
+| 输入 | 处理方式 |
+|------|----------|
+| `'routes:xxx'` | 首段是已注册命名空间 → `t('xxx', { ns: 'routes' })` |
+| `'system.user.title'` | 首段是已注册命名空间 → `t('user.title', { ns: 'system' })` |
+| 其他 | 依次尝试 `routes` / `common`，都未命中则原样返回 |
+
+语言切换时返回的函数引用会更新（依赖 react-i18next 的 `t`），
+配合 `useMemo` / `useEffect` 的依赖数组即可自动重新渲染。
 
 ### `useLocaleSync()` — 语言双向同步 Hook
 
@@ -413,12 +444,13 @@ t('deleteConfirmDesc', { moduleName: '用户' }); // → "确定要删除这个�
 
 ### 路由标题格式
 
-路由 `meta.title` 使用 `'routes:xxx'` 格式，系统自动处理两种格式：
+路由 `meta.title` 有两种来源，统一由 `useRouteTitle()` 解析：
 
-| 格式 | 示例 | 处理方式 |
-|------|------|----------|
-| 带前缀 | `'routes:dashboard'` | 提取 `routes` 作为命名空间，`dashboard` 作为键 |
-| 不带前缀 | `'dashboard'` | 直接作为键，使用默认命名空间 |
+| 来源 | 格式 | 示例 | 处理方式 |
+|------|------|------|----------|
+| 前端静态路由 | `'routes:xxx'` | `'routes:dashboard'` | 首段作命名空间：`t('dashboard', { ns: 'routes' })` |
+| 后端 `/menu/all` | 点号 key | `'system.user.title'` | 首段作命名空间：`t('user.title', { ns: 'system' })` |
+| 其他 | 普通文本 | `'数据看板'` | 原样返回 |
 
 ### 月份文本
 
@@ -539,7 +571,7 @@ const { antdLocale } = useLocale();
 ## 注意事项
 
 1. **必须指定命名空间**：使用 `useI18n('moduleName')` 指定命名空间，避免使用 `namespace:key` 前缀格式
-2. **路由标题使用 `routes:` 前缀**：`meta.title` 中使用 `'routes:xxx'` 格式，由路由系统自动解析
+2. **路由标题统一走 `useRouteTitle()`**：前端静态路由用 `'routes:xxx'`，后端 `/menu/all` 用点号 key（`system.user.title`），不要在各组件里自行判断前缀
 3. **插值用 `{{var}}`**：不要使用 `#{var}` 或 `${var}`
 4. **翻译文件必须双语对称**：`zh-CN` 和 `en-US` 的 `_modules/` 目录下的 JSON 文件名和键名必须一一对应
 5. **获取当前语言用 `i18n.language`**：在 React 环境中使用 `i18n.language`，而非 `i18n.locale`

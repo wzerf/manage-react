@@ -43,7 +43,9 @@ const Login: React.FC = () => {
       );
 
       message.success(t('loginSuccess'));
-      const redirect = searchParams.get('redirect') || '/';
+      const rawRedirect = searchParams.get('redirect');
+      const userHomePath = useAuthStore.getState().userInfo?.homePath;
+      const redirect = rawRedirect ? decodeURIComponent(rawRedirect) : (userHomePath || '/');
       navigate(redirect, { replace: true });
     } catch {
       resetAltcha();

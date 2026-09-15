@@ -27,6 +27,9 @@ export const AuthGuard = ({
     }
 
     if (!isAuthenticated) {
+        if (location.pathname.startsWith(loginPath) || location.pathname === '/') {
+            return <Navigate to={loginPath} replace state={{ from: location }}/>;
+        }
         const redirect = encodeURIComponent(location.pathname + location.search);
         return <Navigate to={`${loginPath}?redirect=${redirect}`} replace state={{ from: location }}/>;
     }

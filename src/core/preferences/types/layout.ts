@@ -10,7 +10,7 @@ export type LoginExpiredModeType = "modal" | "page";
  * backend 后端权限模式
  * frontend 前端权限模式
  */
-export type AccessModeType = "backend" | "frontend";
+export type AccessModeType = "backend" | "frontend" | "mixed";
 
 /**
  * 支持的语言类型

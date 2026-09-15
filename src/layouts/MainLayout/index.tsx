@@ -20,9 +20,6 @@ import { usePreferencesStore } from '@/core/preferences/store';
 import { useThemeConfig } from '@/core/preferences/hooks/useThemeConfig';
 import { PreferencesPanel } from '@/core/preferences/components';
 
-import { allRoutes } from '@/router';
-import type { AppRouteObject } from '@/core/router/types';
-
 interface LayoutRouteHandle {
   title?: string;
   icon?: string;
@@ -33,11 +30,7 @@ interface LayoutRouteMatch {
   handle: LayoutRouteHandle;
 }
 
-interface MainLayoutProps {
-  routes?: AppRouteObject[];
-}
-
-export const MainLayout = ({ routes: dynamicRoutes }: MainLayoutProps) => {
+export const MainLayout = () => {
   const location = useLocation();
   const rawMatches = useMatches();
   const matches = rawMatches as LayoutRouteMatch[];
@@ -104,11 +97,7 @@ export const MainLayout = ({ routes: dynamicRoutes }: MainLayoutProps) => {
 
   // 菜单数据
   const permissions = useMemo(() => getAllPermissions(), [getAllPermissions]);
-  const menuData = useMenuData({
-    staticRoutes: allRoutes,
-    dynamicRoutes,
-    permissions,
-  });
+  const menuData = useMenuData({ permissions });
 
   // 全屏状态
   const [isFullscreen, setIsFullscreen] = useState(false);

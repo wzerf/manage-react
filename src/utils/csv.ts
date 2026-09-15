@@ -1,5 +1,5 @@
 import { PaginationQuery } from '@/core';
-import { message } from 'antd';
+import { appMessage as message } from '@/utils/app-message';
 
 /**
  * 审计日志 CSV 导出（客户端聚合实现）：

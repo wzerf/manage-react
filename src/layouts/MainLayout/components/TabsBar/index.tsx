@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons';
 import { usePreferencesStore } from '@/core/preferences/store';
 import { useTabsStore } from '@/stores/tabs';
-import { useI18n } from '@/core/i18n';
+import { useI18n, useRouteTitle } from '@/core/i18n';
 import { usePageRefreshStore } from '@/stores/pageRefresh';
 import { getIconFromName } from '../../utils/iconResolver';
 import './tabsbar.css';
@@ -52,31 +52,8 @@ export const Index = () => {
   void preferences;
 
   const { t } = useI18n('common');
-  const { t: tRoutes, i18n } = useTranslation('routes');
-
-  // 翻译标题的工具函数
-  const translateTitle = useCallback(
-    (title: string): string => {
-      // 如果 title 是 i18n key (以 'menu:' 或 'routes:' 开头)，进行翻译
-      if (title.startsWith('menu:')) {
-        const keyName = title.substring(5);
-        return tRoutes(keyName, { defaultValue: title });
-      } else if (title.startsWith('routes:')) {
-        const keyName = title.substring(7);
-        return tRoutes(keyName, { defaultValue: title });
-      } else if (title.startsWith('menu.')) {
-        const keyName = title.substring(5);
-        return tRoutes(keyName, { defaultValue: title });
-      } else if (title.startsWith('routes.')) {
-        const keyName = title.substring(7);
-        return tRoutes(keyName, { defaultValue: title });
-      } else {
-        // 否则直接翻译
-        return tRoutes(title, { defaultValue: title });
-      }
-    },
-    [tRoutes],
-  );
+  const { i18n } = useTranslation();
+  const translateTitle = useRouteTitle();
 
   // 页面刷新
   const triggerPageRefresh = usePageRefreshStore((state) => state.triggerRefresh);
@@ -217,7 +194,7 @@ export const Index = () => {
       ),
       closable: tab.closable,
     }));
-  }, [tabs, tabbarConfig.showIcon, i18n.language, translateTitle]);
+  }, [tabs, tabbarConfig.showIcon]);
 
   // 处理标签切换
   const handleTabChange = useCallback(

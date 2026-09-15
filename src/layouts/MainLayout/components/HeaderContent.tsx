@@ -17,11 +17,10 @@ import {
   FullscreenExitOutlined,
 } from '@ant-design/icons';
 import { useMatches, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 
 import { getIconFromName } from '@/layouts/MainLayout/utils/iconResolver';
 
-import { useI18n } from '@/core/i18n';
+import { useI18n, useRouteTitle } from '@/core/i18n';
 import { usePreferencesStore } from '@/core/preferences/store';
 import type { SupportedLanguagesType } from '@/core/preferences/types/layout';
 
@@ -61,7 +60,7 @@ export const HeaderContent = ({
   widgetConfig,
 }: HeaderContentProps) => {
   const { t } = useI18n('common');
-  const { t: tRoutes, i18n } = useTranslation(); // 用于路由翻译
+  const translateTitle = useRouteTitle();
   const navigate = useNavigate();
   const matches = useMatches();
 
@@ -98,9 +97,8 @@ export const HeaderContent = ({
           icon = getIconFromName(match.handle.icon);
         }
 
-        // 尝试通过路由 name 获取翻译标题
-        let title = match.handle?.title || '';
-        title = tRoutes(title, { defaultValue: title });
+        // 解析标题（支持 'routes:xxx' 与后端下发的点号 key）
+        const title = translateTitle(match.handle?.title);
 
         return {
           key: match.pathname,
@@ -134,8 +132,7 @@ export const HeaderContent = ({
     matches,
     navigate,
     t,
-    tRoutes,
-    i18n.language,
+    translateTitle,
     breadcrumbPreferences?.showIcon,
     breadcrumbPreferences?.showHome,
   ]);

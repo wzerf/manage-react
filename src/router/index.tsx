@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 
 import { createAccessibleRouter } from '@/core/router/factory';
-import { useAuthStore } from '@/stores';
+import { useAccessRefreshStore, useAuthStore } from '@/stores';
 import { useAuth } from '@/hooks/useAuth';
 import { getAccessStatic } from '@/core/access';
 import { fetchAllDictEntries } from '@/hooks/useDictCache';
 import { usePreferencesStore } from '@/core/preferences/store';
 import { getAllMenusApi } from '@/api/rest/menu';
 import { useI18n } from '@/core/i18n';
-import { message } from 'antd';
+import { appMessage as message } from '@/utils/app-message';
 import { loadAccessMenusCache, saveAccessMenusCache } from '@/utils/menu-cache';
 
 import { Forbidden } from '@/pages/core/error';
@@ -48,22 +48,38 @@ const pageMap: ComponentRecordType = {};
 for (const [globPath, module] of Object.entries(rawPageModules)) {
   const mod = module as any;
   const Component = mod?.default || mod;
-  if (typeof Component === 'function') {
-    // globPath: "../pages/app/dashboard/index.tsx"
-    // 提取 app/ 之后的路径部分
-    const appMatch = globPath.match(/(?:pages|views)\/app\/(.+)/);
-    if (!appMatch) continue;
-
-    const relativePath = appMatch[1] // "dashboard/index.tsx"
-      .replace(/\.tsx$/, '') // "dashboard/index"
-      .replace(/\/index$/, ''); // "dashboard"
-
-    // 生成与 normalizeViewPath 一致的键
-    const normalizedKey = `/${relativePath}`; // "/dashboard"
-    pageMap[normalizedKey] = Component;
-    pageMap[`${normalizedKey}/index`] = Component; // "/dashboard/index"
-    pageMap[`${normalizedKey}.tsx`] = Component; // "/dashboard.tsx"
-    pageMap[`${normalizedKey}/index.tsx`] = Component; // "/dashboard/index.tsx"
+  if (typeof Component !== 'function') continue;
+  const appMatch = globPath.match(/(?:pages|views)\/app\/(.+)/);
+  if (!appMatch) continue;
+  const relativePath = appMatch[1].replace(/\.tsx$/, '').replace(/\/index$/, '');
+  const normalizedKey = `/${relativePath}`;
+  pageMap[normalizedKey] = Component;
+  pageMap[`${normalizedKey}/index`] = Component;
+  pageMap[`${normalizedKey}.tsx`] = Component;
+  pageMap[`${normalizedKey}/index.tsx`] = Component;
+  const withVueSuffix = `${normalizedKey}.vue`;
+  pageMap[withVueSuffix] = Component;
+  const withIndexVue = `${normalizedKey}/index.vue`;
+  pageMap[withIndexVue] = Component;
+  if (relativePath.includes('/')) {
+    const lastSeg = relativePath.split('/').pop()!;
+    if (lastSeg === 'index') continue;
+  }
+}
+const coreFallbackModules = import.meta.glob('../pages/core/error/*.tsx', { eager: true });
+for (const [globPath, module] of Object.entries(coreFallbackModules)) {
+  const mod = module as any;
+  const Component = mod?.default || mod;
+  if (typeof Component !== 'function') continue;
+  if (globPath.includes('/404.tsx')) {
+    pageMap['/_core/fallback/not-found'] = Component;
+    pageMap['/_core/fallback/not-found.vue'] = Component;
+    pageMap['/_core/fallback/not-found.tsx'] = Component;
+  }
+  if (globPath.includes('/403.tsx')) {
+    pageMap['/_core/fallback/forbidden'] = Component;
+    pageMap['/_core/fallback/forbidden.vue'] = Component;
+    pageMap['/_core/fallback/forbidden.tsx'] = Component;
   }
 }
 
@@ -135,31 +151,33 @@ export const AppRouter = () => {
           }
         }
 
-        // await 之后，通过 useAccess 获取最新合并权限（角色码 + 权限码）
         const freshPermissions = getAccessStatic().getAllPermissions();
+        const isAuthed = !!useAuthStore.getState().accessToken;
 
-        // 无论认证是否成功，都生成路由（未认证时 permissions 为空，AuthGuard 会拦截）
-        const appRouter = await createAccessibleRouter(accessMode, {
+        const effectiveMode =
+          !isAuthed && (accessMode === 'backend' || accessMode === 'mixed')
+            ? ('frontend' as const)
+            : accessMode;
+
+        const appRouter = await createAccessibleRouter(effectiveMode, {
           routes: allRoutes,
           permissions: freshPermissions,
           forbiddenElement: <Forbidden />,
           fetchMenuListAsync: async () => {
-            // 对齐 Vue：后端模式走 REST /menu/all，失败时回落到同 token 的本地缓存
             const token = useAuthStore.getState().accessToken;
+            if (!token) return [];
             try {
               const menus = await getAllMenusApi();
               const list = (menus ?? []) as BackendRoute[];
-              if (token) {
-                saveAccessMenusCache(token, list);
-              }
+              saveAccessMenusCache(token, list);
               return list;
-            } catch (error) {
-              if (token) {
-                const cached = loadAccessMenusCache<BackendRoute>(token);
-                if (cached) {
-                  message.warning('菜单加载失败，已使用本地缓存');
-                  return cached;
-                }
+            } catch (error: unknown) {
+              const status = (error as { response?: { status?: number }; status?: number })?.response?.status ?? (error as { status?: number })?.status;
+              if (status === 401) return [];
+              const cached = loadAccessMenusCache<BackendRoute>(token);
+              if (cached) {
+                message.warning('菜单加载失败，已使用本地缓存');
+                return cached;
               }
               throw error;
             }
@@ -168,6 +186,9 @@ export const AppRouter = () => {
           pageMap,
           autoInjectRedirect: true,
           autoSort: true,
+          onRoutesGenerated: (generated) => {
+            useAccessRefreshStore.getState().setAccessRoutes(generated);
+          },
         });
 
         if (!stale) {

@@ -7,8 +7,8 @@ import { createLazyRoute } from '@/core/router';
  */
 export const logRoutes: AppRouteObject[] = [
   {
-    name: 'log',
-    path: 'log',
+    name: 'Log',
+    path: '/log',
     element: createLazyRoute(() => import('@/pages/app/log')),
     meta: {
       title: 'routes:log',

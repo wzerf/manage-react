@@ -8,7 +8,7 @@ export type IconType = IconName | ComponentType<{ className?: string; style?: Re
 export type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'destructive' | string;
 export type BadgeType = 'dot' | 'normal';
 
-export type AccessModeType = 'frontend' | 'backend';
+export type AccessModeType = 'frontend' | 'backend' | 'mixed';
 
 /**
  * 后端返回的路由对象（组件路径为字符串）
@@ -211,6 +211,8 @@ export interface GenerateMenuAndRoutesOptions {
     routes: AppRouteObject[];
     autoInjectRedirect?: boolean;
     autoSort?: boolean;
+    /** 最终可访问路由树生成后回调（供侧栏菜单使用，避免再回退到前端静态全集）。 */
+    onRoutesGenerated?: (routes: AppRouteObject[]) => void;
 }
 
 
